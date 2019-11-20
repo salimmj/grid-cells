@@ -76,7 +76,7 @@ tf.flags.DEFINE_float('model_init_weight_disp', 0.0,
 tf.flags.DEFINE_integer('training_epochs', 1000, 'Number of training epochs.')
 tf.flags.DEFINE_integer('training_steps_per_epoch', 1000,
                         'Number of optimization steps per epoch.')
-tf.flags.DEFINE_integer('training_minibatch_size', 10,
+tf.flags.DEFINE_integer('training_minibatch_size', 100,
                         'Size of the training minibatch.')
 tf.flags.DEFINE_integer('training_evaluation_minibatch_size', 4000,
                         'Size of the minibatch during evaluation.')
@@ -95,7 +95,7 @@ tf.flags.DEFINE_string('training_optimizer_options',
 tf.flags.DEFINE_string('saver_results_directory',
                        None,
                        'Path to directory for saving results.')
-tf.flags.DEFINE_integer('saver_eval_time', 2,
+tf.flags.DEFINE_integer('saver_eval_time', 20,
                         'Frequency at which results are saved.')
 
 # Require flags
@@ -193,6 +193,8 @@ def train():
   grid_scores['btln_90_separation'] = np.zeros((FLAGS.model_nh_bottleneck,))
   grid_scores['lstm_60'] = np.zeros((FLAGS.model_nh_lstm,))
   grid_scores['lstm_90'] = np.zeros((FLAGS.model_nh_lstm,))
+  grid_scores['lstm_60_separation'] = np.zeros((FLAGS.model_nh_lstm,))
+  grid_scores['lstm_90_separation'] = np.zeros((FLAGS.model_nh_lstm,))
 
   # Create scorer objects
   starts = [0.2] * 10
@@ -200,7 +202,7 @@ def train():
   masks_parameters = zip(starts, ends.tolist())
   latest_epoch_scorer = scores.GridScorer(20, data_reader.get_coord_range(),
                                           masks_parameters)
-
+  saver = tf.train.Saver()
   with tf.train.SingularMonitoredSession() as sess:
     for epoch in range(FLAGS.training_epochs):
       loss_acc = list()
@@ -221,13 +223,29 @@ def train():
           })
           res = utils.concat_dict(res, mb_res)
 
+        # Store lstm
+        lstm_filename = 'lstm_'+str(epoch)+'.pdf'
+        grid_scores['lstm_60'], grid_scores['lstm_90'], grid_scores[
+            'lstm_60_separation'], grid_scores[
+                'lstm_90_separation'] = utils.get_scores_and_plot(
+                    latest_epoch_scorer, res['pos_xy'], res['lstm'],
+                    FLAGS.saver_results_directory, lstm_filename)
+        
         # Store at the end of validation
-        filename = 'rates_and_sac_latest_hd.pdf'
+        filename = 'rates_and_sac_latest_hd_'+str(epoch)+'.pdf'
         grid_scores['btln_60'], grid_scores['btln_90'], grid_scores[
             'btln_60_separation'], grid_scores[
                 'btln_90_separation'] = utils.get_scores_and_plot(
                     latest_epoch_scorer, res['pos_xy'], res['bottleneck'],
                     FLAGS.saver_results_directory, filename)
+        def get_session(sess):
+            session = sess
+            while type(session).__name__ != 'Session':
+                #pylint: disable=W0212
+                session = session._sess
+            return session
+        saver.save(get_session(sess), './')
+        
 
 
 def main(unused_argv):

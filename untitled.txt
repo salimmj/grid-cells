@@ -1,0 +1,7 @@
+pip2 install --upgrade numpy==1.13.3
+pip2 install --upgrade tensorflow==1.12.0-rc0
+ pip2 install --upgrade dm-sonnet==1.27
+ pip2 install --upgrade scipy==1.0.0
+ pip2 install --upgrade matplotlib==1.5.2
+ pip2 install --upgrade tensorflow-probability==0.5.0
+ pip2 install --upgrade wrapt==1.9.0
