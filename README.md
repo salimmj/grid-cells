@@ -15,7 +15,7 @@ Work in this area is important to strengthen the parallel between brain behavior
 
 While I have been able to generate path trajectories and reproduce results in the paper, I have yet to build a dataset as clean as the one released in the code. 
 
-One interesting result I got is I was able to generate extremely crisp and grid-like cells that are more triangular than the ones released in the paper while only using half the neurons in the linear layer and only 20% dropout (instead of 50%). The grids did not develop different scales however. This might suggest grid cells emerge from the pressure of having few resources that are not enough to represent space in an inefficient fashion and therefore converge towards grid representation which encodes space more efficiently. The next step is to remove dropout altogether and try with fewer units. 
-![](https://github.com/salimmj/grid-cells/blob/master/assets/20%25dropout.PNG)
-
+One interesting result I got is I was able to generate extremely crisp and grid-like cells that are more triangular than the ones released in the paper while only using half the neurons in the linear layer and only 20% dropout (instead of 50%). Even more surprising was that the LSTM layer developed similar grid cells which was not the case in the paper. The grids did not develop different scales however. This might suggest grid cells emerge from the pressure of having few resources that are not enough to represent space in an inefficient fashion and therefore converge towards grid representation which encodes space more efficiently. The next step is to remove dropout altogether and try with fewer units. 
+![linear layer 128 unit 20% dropout](https://github.com/salimmj/grid-cells/blob/master/assets/20%25dropout.PNG)
+![LSTM layer 128 unit 20% dropout](https://github.com/salimmj/grid-cells/blob/master/assets/lstm20dropout.png)
 3D experiment TBD!
