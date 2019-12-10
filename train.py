@@ -205,6 +205,9 @@ def train():
   saver = tf.train.Saver()
   with tf.train.SingularMonitoredSession() as sess:
     for epoch in range(FLAGS.training_epochs):
+      if epoch ==4:
+        print('lstm', grid_scores['lstm_60'])
+        print('linear', grid_scores['btln_60'])
       loss_acc = list()
       for _ in range(FLAGS.training_steps_per_epoch):
         res = sess.run({'train_op': train_op, 'total_loss': train_loss})
@@ -222,7 +225,7 @@ def train():
               'pos_xy': target_pos
           })
           res = utils.concat_dict(res, mb_res)
-
+        
         # Store lstm
         lstm_filename = 'lstm_'+str(epoch)+'.pdf'
         grid_scores['lstm_60'], grid_scores['lstm_90'], grid_scores[

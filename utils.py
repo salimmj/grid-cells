@@ -147,6 +147,8 @@ def get_scores_and_plot(scorer,
       scorer.calculate_ratemap(xy[:, 0], xy[:, 1], act[:, i])
       for i in xrange(n_units)
   ]
+#   print('UNIT0')
+#   print(s[0])
   # Get the scores
   score_60, score_90, max_60_mask, max_90_mask, sac = zip(
       *[scorer.get_scores(rate_map) for rate_map in s])

@@ -55,6 +55,7 @@ class GridScorer(object):
         autocorrelation of the 2D autocorrelation.
       min_max: Correction.
     """
+#     print('nbins', nbins, 'coords_range', coords_range)
     self._nbins = nbins
     self._min_max = min_max
     self._coords_range = coords_range
