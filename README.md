@@ -8,3 +8,13 @@ In this class project, I attempt to use their approach for other experiments. In
 * In real-life rat experiments, grid-cells do not emerge when the infant rat develops in a spherical environment deprived of boundaries and geometric references, distal spacial cues, and experience with environmental anchoring. 
 * What about the case of learning path integration in pseudo-infinite space (dataset is sparse of the space)
 * What about tasks involving remembering odors in relation to places?
+
+Work in this area is important to strengthen the parallel between brain behavior and emergent behavior in AI. 
+
+# Results
+
+While I have been able to generate path trajectories and reproduce results in the paper, I have yet to build a dataset as clean as the one released in the code. 
+
+One interesting result I got is I was able to generate extremely crisp and grid-like cells that are more triangular than the ones released in the paper while only using half the neurons in the linear layer and only 20% dropout (instead of 50%). This might suggest grid cells emerge from the pressure of having few resources that are not enough to represent space in an inefficient fashion and therefore converge towards grid representation which encodes space more efficiently. The next step is to remove dropout altogether and try with fewer units. 
+
+3D experiment TBD!
