@@ -173,7 +173,7 @@ def generate_rat_trajectory_for_dataset(steps, sample):
         low = np.array([0,0,0])
         high = np.array([L,L,L])
         # move.
-        position_matrix[step] = np.minimum(np.maximum(position_matrix[step-1] + dirr*v*dt, low), high)
+        position_matrix[step] = position_matrix[step-1] + dirr*v*dt #np.minimum(np.maximum(position_matrix[step-1] + dirr*v*dt, low), high)
         velocity_matrix[step] = dirr*v*dt
         
         # turn the 3D direction vector around y-axis
@@ -186,7 +186,7 @@ def generate_rat_trajectory_for_dataset(steps, sample):
     def bin_mean(arr):
       return stats.binned_statistic(np.arange(steps), arr, 'mean', bins=sample).statistic
 
-    ego_vel = np.apply_along_axis(bin_mean, 0, ego_vel)
+    # ego_vel = np.apply_along_axis(bin_mean, 0, ego_vel)
 
     ego_vel[:,1] = np.sin(ego_vel[:,1])
     ego_vel[:,2] = np.cos(ego_vel[:,2])
@@ -195,7 +195,7 @@ def generate_rat_trajectory_for_dataset(steps, sample):
     # return init_pos, init_hd, ego_vel, target_pos, target_hd
     return [position_matrix[0], 
             np.array([hd[0]]), 
-            ego_vel, 
+            ego_vel[index, :], 
             position_matrix[1:][index, :], 
             hd[1:][index]]
 
