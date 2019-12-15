@@ -27,7 +27,7 @@ import Tkinter  # pylint: disable=unused-import
 matplotlib.use('Agg')
 
 import dataset_reader  # pylint: disable=g-bad-import-order, g-import-not-at-top
-import modelfreeze  # pylint: disable=g-bad-import-order
+import model  # pylint: disable=g-bad-import-order
 import scores  # pylint: disable=g-bad-import-order
 import utils  # pylint: disable=g-bad-import-order
 
@@ -95,7 +95,7 @@ tf.flags.DEFINE_string('training_optimizer_options',
 tf.flags.DEFINE_string('saver_results_directory',
                        None,
                        'Path to directory for saving results.')
-tf.flags.DEFINE_integer('saver_eval_time', 5,
+tf.flags.DEFINE_integer('saver_eval_time', 20,
                         'Frequency at which results are saved.')
 
 # Require flags
@@ -132,15 +132,15 @@ def train():
   target_ensembles = place_cell_ensembles + head_direction_ensembles
 
   # Model creation
-  rnn_core = modelfreeze.GridCellsRNNCell(
+  rnn_core = model.GridCellsRNNCell(
       target_ensembles=target_ensembles,
       nh_lstm=FLAGS.model_nh_lstm,
       nh_bottleneck=FLAGS.model_nh_bottleneck,
-      dropoutrates_bottleneck=np.array(FLAGS.model_dropout_rates),
+#       dropoutrates_bottleneck=np.array(FLAGS.model_dropout_rates),
       bottleneck_weight_decay=FLAGS.model_weight_decay,
       bottleneck_has_bias=FLAGS.model_bottleneck_has_bias,
       init_weight_disp=FLAGS.model_init_weight_disp)
-  rnn = modelfreeze.GridCellsRNN(rnn_core, FLAGS.model_nh_lstm)
+  rnn = model.GridCellsRNN(rnn_core, FLAGS.model_nh_lstm)
 
   # Get a trajectory batch
   input_tensors = []
@@ -205,9 +205,9 @@ def train():
   saver = tf.train.Saver()
   with tf.train.SingularMonitoredSession() as sess:
     for epoch in range(FLAGS.training_epochs):
-      if epoch ==5:
-        rnn.freeze()
-        print('froze lstm layer')
+      if epoch ==4:
+        print('lstm', grid_scores['lstm_60'])
+        print('linear', grid_scores['btln_60'])
       loss_acc = list()
       for _ in range(FLAGS.training_steps_per_epoch):
         res = sess.run({'train_op': train_op, 'total_loss': train_loss})
@@ -215,7 +215,7 @@ def train():
 
       tf.logging.info('Epoch %i, mean loss %.5f, std loss %.5f', epoch,
                       np.mean(loss_acc), np.std(loss_acc))
-      if epoch % FLAGS.saver_eval_time == 0:
+      if epoch % FLAGS.saver_eval_time == 0 or epoch == FLAGS.training_epochs-1:
         res = dict()
         for _ in xrange(FLAGS.training_evaluation_minibatch_size //
                         FLAGS.training_minibatch_size):
@@ -235,7 +235,7 @@ def train():
                     FLAGS.saver_results_directory, lstm_filename)
         
         # Store at the end of validation
-        filename = 'rates_and_sac_latest_hd_'+str(epoch)+'.pdf'
+        filename = 'linear_'+str(epoch)+'.pdf'
         grid_scores['btln_60'], grid_scores['btln_90'], grid_scores[
             'btln_60_separation'], grid_scores[
                 'btln_90_separation'] = utils.get_scores_and_plot(

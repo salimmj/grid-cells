@@ -61,9 +61,9 @@ tf.flags.DEFINE_list('task_velocity_noise', [0.0, 0.0, 0.0],
 
 # Model config
 tf.flags.DEFINE_integer('model_nh_lstm', 128, 'Number of hidden units in LSTM.')
-tf.flags.DEFINE_integer('model_nh_bottleneck', 128,
+tf.flags.DEFINE_integer('model_nh_bottleneck', 256,
                         'Number of hidden units in linear bottleneck.')
-tf.flags.DEFINE_list('model_dropout_rates', [0.2],
+tf.flags.DEFINE_list('model_dropout_rates', [0.5],
                      'List of floats with dropout rates.')
 tf.flags.DEFINE_float('model_weight_decay', 1e-5,
                       'Weight decay regularisation')
@@ -235,7 +235,7 @@ def train():
                     FLAGS.saver_results_directory, lstm_filename)
         
         # Store at the end of validation
-        filename = 'rates_and_sac_latest_hd_'+str(epoch)+'.pdf'
+        filename = 'linear_'+str(epoch)+'.pdf'
         grid_scores['btln_60'], grid_scores['btln_90'], grid_scores[
             'btln_60_separation'], grid_scores[
                 'btln_90_separation'] = utils.get_scores_and_plot(
