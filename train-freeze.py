@@ -95,7 +95,7 @@ tf.flags.DEFINE_string('training_optimizer_options',
 tf.flags.DEFINE_string('saver_results_directory',
                        None,
                        'Path to directory for saving results.')
-tf.flags.DEFINE_integer('saver_eval_time', 20,
+tf.flags.DEFINE_integer('saver_eval_time', 2,
                         'Frequency at which results are saved.')
 
 # Require flags
@@ -178,7 +178,7 @@ def train():
   # Optimisation ops
   optimizer_class = eval(FLAGS.training_optimizer_class)  # pylint: disable=eval-used
   optimizer = optimizer_class(**eval(FLAGS.training_optimizer_options))  # pylint: disable=eval-used
-  grad = optimizer.compute_gradients(train_loss)
+  grad = optimizer.compute_gradients(train_loss, var_list=[var for var in rnn_core.get_all_variables() if 'lstm' not in str(var.name)])
   clip_gradient = eval(FLAGS.training_clipping_function)  # pylint: disable=eval-used
   clipped_grad = [
       clip_gradient(g, var, FLAGS.training_clipping) for g, var in grad
@@ -205,7 +205,7 @@ def train():
   saver = tf.train.Saver()
   with tf.train.SingularMonitoredSession() as sess:
     for epoch in range(FLAGS.training_epochs):
-      if epoch ==4:
+      if epoch in [2, 3, 4]:
         print('lstm', grid_scores['lstm_60'])
         print('linear', grid_scores['btln_60'])
       loss_acc = list()
@@ -215,7 +215,7 @@ def train():
 
       tf.logging.info('Epoch %i, mean loss %.5f, std loss %.5f', epoch,
                       np.mean(loss_acc), np.std(loss_acc))
-      if epoch % FLAGS.saver_eval_time == 0:
+      if epoch % FLAGS.saver_eval_time == 0 or epoch == FLAGS.training_epochs-1:
         res = dict()
         for _ in xrange(FLAGS.training_evaluation_minibatch_size //
                         FLAGS.training_minibatch_size):
