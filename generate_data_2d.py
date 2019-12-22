@@ -4,6 +4,10 @@ from scipy import stats
 import numpy as np
 import math 
 from sklearn import preprocessing
+import concurrent.futures
+import logging
+import threading
+from multiprocessing import Process
 
 # Duration of simulated trajectories (seconds)
 T = 15
@@ -181,7 +185,7 @@ def generate_rat_trajectory_for_dataset(steps, sample):
         hd[step] = angle(norm_vec, dirr)
 
     index = [True if i%frequency==0 else False for i in range(steps)]
-    position_matrix = np.delete(position_matrix, 1, 1)/100.0 - 1.1
+    position_matrix = np.delete(position_matrix,1,1)/100.0 - 1.1
 
     def bin_mean(arr):
       return stats.binned_statistic(np.arange(steps), arr, 'mean', bins=sample).statistic
@@ -217,7 +221,8 @@ def _float32_feature(value):
 
 records_per_file = 10000
 
-for filename in filenames:
+def write_record(filename):
+    print('writing record', filename)
     tfrecord_writer = tf.io.TFRecordWriter(filename)
 
     data = [generate_rat_trajectory_for_dataset(800, 100) for _ in range(records_per_file)]
@@ -239,3 +244,25 @@ for filename in filenames:
       example_to_string = example.SerializeToString()
       # 5. Write to TFRecord
       tfrecord_writer.write(example_to_string)
+        
+def write_records(filenames):
+    for filename in filenames:
+        write_record(filename)
+
+if __name__ == "__main__":
+#     format = "%(asctime)s: %(message)s"
+#     logging.basicConfig(format=format, level=logging.INFO,
+#                         datefmt="%H:%M:%S")
+
+#     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+#         executor.map(write_record, filenames)
+#     for filename in filenames:
+#         write_record(filename)
+    coord = tf.train.Coordinator()
+    processes = []
+    args = np.array_split(filenames, 4)
+    for thread_index in range(4):
+        p = Process(target=write_records, args=[args[thread_index]])
+        p.start()
+        processes.append(p)
+    coord.join(processes)
