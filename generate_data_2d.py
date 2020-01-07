@@ -74,7 +74,7 @@ def y_rotation(vector,theta):
     R = np.array([[np.cos(theta),0,np.sin(theta)],[0,1,0],[-np.sin(theta), 0, np.cos(theta)]])
     return np.dot(R,vector)
 
-def angle(v1, v2):
+def angle_3d(v1, v2):
     """The acute angle between two vectors"""
     angle = np.arctan2(v2[2], v2[0]) - np.arctan2(v1[2], v1[0])
     if angle > np.pi:
@@ -116,13 +116,54 @@ def min_dist_angle(position, direction):
     south_wall = [0, 0, -1]
     
     walls = [south_wall, north_wall, west_wall, east_wall]
-    aWall = angle(direction, walls[min_pos])
+    aWall = angle_3d(direction, walls[min_pos])
     return [dWall, aWall]
 
 def normalize(vec):
     return vec / np.linalg.norm(vec)
 
-def generate_rat_trajectory_for_dataset(steps, sample):
+def rotation(vector,theta):
+    """Rotates 2-D vector around y-axis"""
+    return np.array([np.cos(theta)*vector[0]-np.sin(theta)*vector[1],np.sin(theta)*vector[0]+np.cos(theta)*vector[1]])
+
+def angle(v1, v2):
+    """The acute angle between two vectors"""
+    angle = np.arctan2(v2[1], v2[0]) - np.arctan2(v1[1], v1[0])
+    # angle = angle%(2*np.pi)
+    if angle > np.pi:
+      angle -= 2*np.pi
+    elif angle <= -np.pi:
+      angle += 2*np.pi
+    return angle
+
+def velocity(vec):
+  return np.linalg.norm(vec)/0.16
+
+def head_dir(vec):
+  return angle(np.array([1,0]), vec).astype('float32')
+
+def sample(position_matrix):
+  assert len(position_matrix) == 816
+  position_matrix = position_matrix[[True if i%8==0 else False for i in range(816)]]
+  start_pos = position_matrix[0]
+  diffs = np.array([position_matrix[i+1] - position_matrix[i] for i in range(101)])
+  trans_vels = np.apply_along_axis(velocity, 1, diffs)
+  hds = np.apply_along_axis(head_dir, 1, diffs)
+  ang_vels = np.array([hds[i+1] - hds[i] for i in range(100)])/0.16
+  # print(min(hds), max(hds))
+  # print(len(trans_vels), len(hds), len(ang_vels), len(position_matrix[1:-1]))
+  ego_vel = np.zeros((100, 3))
+  ego_vel[:,0] = trans_vels[:-1]
+  ego_vel[:,1] = np.cos(ang_vels)
+  ego_vel[:,2] = np.cos(ang_vels)
+  return [position_matrix[0], 
+          np.array([hds[0]]), 
+          ego_vel, 
+          position_matrix[1:-1], 
+          hds[1:]]
+
+
+def generate_rat_trajectory(steps):
     """Generate a pseudo-random rat trajectory within a L-size square cage
 
     steps - number of steps for the rat to take
@@ -131,77 +172,52 @@ def generate_rat_trajectory_for_dataset(steps, sample):
       position - (samples,3)-shaped matrix holding the 3-dim positions overtime
       velocity - (samples,3)-shaped matrix holding the 3-dim velocities overtime
     """
-
-    # record every steps/sample steps
-    frequency = steps/sample
     
     # Initialize parameters for velocity and camera
     v = 20
     dirr = normalize(np.random.rand(3))
     up = np.array([0, 1, 0])
     dt = 0.02
-    norm_vec = np.array([0,0,0])
+    norm_vec = np.array([1,0,0])
 
     # create random velocity samples
     random_turn = np.radians(np.random.normal(mu, angular_v_sigma, steps))
     # print(random_turn)
     random_velocity = np.random.rayleigh(forward_v_sigma, steps)
     
-    # allocate memory for x, y, and z-components of position and velocity
     hd = np.zeros(steps+1)
-    hd[0] = angle(norm_vec, dirr)
+    hd[0] = angle_3d(norm_vec, dirr).astype('float32')
 
-    ego_vel = np.zeros((steps, 3))
-
-    position_matrix = np.zeros((steps+1, 3))
+    # allocate memory for x, y, and z-components of position and velocity
+    position_matrix = np.zeros((steps, 3))
     position_matrix[0] = L*np.random.rand(3) # initialize
-    velocity_matrix = np.zeros((steps+1, 3))
+    velocity_matrix = np.zeros((steps, 3))
     
-    for step in range(1, steps+1):
+    for step in range(1, steps):
         # computes the min distance and corresponding angle for a position
         [dWall, aWall] = min_dist_angle(position_matrix[step-1], dirr)
 
         # update speed and turn angle 
-        if dWall<2 and np.absolute(aWall)<np.pi/2:
+        if dWall<3 and np.absolute(aWall)<np.pi/2:
             # print('oups')
-            angle_vel = aWall/np.absolute(aWall)*(np.pi-np.absolute(aWall)) + random_turn[step-1]
-            v = v-0.5*(v-v_reduction_factor) # slow down
+            angl = aWall/np.absolute(aWall)*(np.pi-np.absolute(aWall)) + random_turn[step]
+            v = v-0.25*(v) # slow down
         else:
-            v = random_velocity[step-1]
-            angle_vel = random_turn[step-1]
-
-        ego_vel[step-1][0] = v/100.0
-        ego_vel[step-1][1] = angle_vel
-        ego_vel[step-1][2] = angle_vel
-
+            v = random_velocity[step]
+            angl = random_turn[step]
+        
         low = np.array([0,0,0])
         high = np.array([L,L,L])
         # move.
-        position_matrix[step] = position_matrix[step-1] + dirr*v*dt #np.minimum(np.maximum(position_matrix[step-1] + dirr*v*dt, low), high)
-        velocity_matrix[step] = dirr*v*dt
+        position_matrix[step] = (position_matrix[step-1] + dirr*v*dt) #np.minimum(np.maximum(position_matrix[step-1] + dirr*v*dt, low), high)
+        velocity_matrix[step] = (dirr*v*dt)
         
         # turn the 3D direction vector around y-axis
-        dirr = y_rotation(dirr, angle_vel*dt)
-        hd[step] = angle(norm_vec, dirr)
-
-    index = [True if i%frequency==0 else False for i in range(steps)]
-    position_matrix = np.delete(position_matrix,1,1)/100.0 - 1.1
-
-    def bin_mean(arr):
-      return stats.binned_statistic(np.arange(steps), arr, 'mean', bins=sample).statistic
-
-    # ego_vel = np.apply_along_axis(bin_mean, 0, ego_vel)
-
-    ego_vel[:,1] = np.sin(ego_vel[:,1])
-    ego_vel[:,2] = np.cos(ego_vel[:,2])
-
-    velocity_matrix = velocity_matrix/100.0
+        dirr = y_rotation(dirr, angl*dt)
+        hd[step] = angle_3d(norm_vec, dirr)
+        
     # return init_pos, init_hd, ego_vel, target_pos, target_hd
-    return [position_matrix[0], 
-            np.array([hd[0]]), 
-            ego_vel[index, :], 
-            position_matrix[1:][index, :], 
-            hd[1:][index]]
+    return (np.delete(position_matrix,1,1)/100.0 - 1.1).astype('float32')
 
 def filename_generator(root):
   """Generates lists of files for a given dataset version."""
@@ -225,7 +241,7 @@ def write_record(filename):
     print('writing record', filename)
     tfrecord_writer = tf.io.TFRecordWriter(filename)
 
-    data = [generate_rat_trajectory_for_dataset(800, 100) for _ in range(records_per_file)]
+    data = [sample(generate_rat_trajectory(816)) for _ in range(records_per_file)]
 
     for index in range(records_per_file):
       # 1. Convert your data into tf.train.Feature
